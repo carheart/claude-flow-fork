@@ -10,10 +10,28 @@ import { dirname, join, resolve } from 'path';
 import { existsSync, readFileSync } from 'fs';
 import { spawn } from 'child_process';
 import process from 'process';
+import dotenv from 'dotenv';
 
-// Read version from package.json
+// ============================================
+// LOAD FORK CONFIGURATION FROM .env
+// ============================================
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+// Load .env file if it exists
+const envPath = join(__dirname, '..', '.env');
+if (existsSync(envPath)) {
+  dotenv.config({ path: envPath });
+  
+  if (process.env.CLAUDE_FLOW_DEBUG === 'true') {
+    console.error('[Claude Flow Fork] Configuration loaded from .env');
+    console.error('  PASSTHROUGH:', process.env.CLAUDE_FLOW_PASSTHROUGH);
+    console.error('  NO_DEPENDENCY_CHAINING:', process.env.CLAUDE_FLOW_NO_DEPENDENCY_CHAINING);
+    console.error('  FORK_VERSION:', process.env.CLAUDE_FLOW_FORK_VERSION);
+  }
+}
+
+// Read version from package.json
 const packageJson = JSON.parse(readFileSync(join(__dirname, '../package.json'), 'utf-8'));
 const VERSION = packageJson.version;
 

@@ -282,24 +282,36 @@ export class WorkflowExecutor {
     
     // Handle stdout with stream processor for better formatting (only in non-interactive mode)
     if (this.options.nonInteractive && this.options.outputFormat === 'stream-json' && claudeProcess.stdout) {
-      // Import and use stream processor
-      const { createStreamProcessor } = await import('./stream-processor.js');
-      const streamProcessor = createStreamProcessor(
-        agent.name,
-        this.getAgentIcon(agent.id),
-        {
-          verbose: this.options.logLevel === 'debug',
-          logLevel: this.options.logLevel,
-          taskId: agent.taskId,
-          agentId: agent.id,
-          display: null // Interactive-style formatting instead of concurrent display
+      // Check for passthrough mode - allows raw JSON to flow through for swarm-ui visualization
+      if (process.env.CLAUDE_FLOW_PASSTHROUGH === 'true') {
+        // Direct passthrough to parent process - raw JSON stream
+        claudeProcess.stdout.pipe(process.stdout);
+        
+        // Log to stderr so it doesn't interfere with JSON stream
+        if (this.options.logLevel !== 'quiet') {
+          console.error(`    🔄 [${agent.name}] JSON passthrough mode enabled (CLAUDE_FLOW_PASSTHROUGH=true)`);
         }
-      );
+      } else {
+        // Original behavior - format with StreamProcessor for human readability
+        // Import and use stream processor
+        const { createStreamProcessor } = await import('./stream-processor.js');
+        const streamProcessor = createStreamProcessor(
+          agent.name,
+          this.getAgentIcon(agent.id),
+          {
+            verbose: this.options.logLevel === 'debug',
+            logLevel: this.options.logLevel,
+            taskId: agent.taskId,
+            agentId: agent.id,
+            display: null // Interactive-style formatting instead of concurrent display
+          }
+        );
+        
+        // Pipe stdout through processor
+        claudeProcess.stdout.pipe(streamProcessor);
+      }
       
-      // Pipe stdout through processor
-      claudeProcess.stdout.pipe(streamProcessor);
-      
-      // Handle stderr for non-interactive mode
+      // Handle stderr for non-interactive mode (always, regardless of passthrough)
       claudeProcess.stderr.on('data', (data) => {
         const message = data.toString().trim();
         if (message) {
@@ -1148,7 +1160,9 @@ COORDINATION KEY POINTS:
           
           // Check if we should chain from a previous task
           let chainOptions = {};
-          if (this.enableChaining && this.options.outputFormat === 'stream-json' && task.depends?.length > 0) {
+          const forceDependencyChaining = process.env.CLAUDE_FLOW_FORCE_DEPENDENCY_CHAINING === 'true';
+          if ((forceDependencyChaining || (this.enableChaining && !process.env.CLAUDE_FLOW_NO_DEPENDENCY_CHAINING)) && 
+              this.options.outputFormat === 'stream-json' && task.depends?.length > 0) {
             // Get the output stream from the last dependency
             const lastDependency = task.depends[task.depends.length - 1];
             const dependencyStream = this.taskOutputStreams.get(lastDependency);
@@ -1247,7 +1261,9 @@ COORDINATION KEY POINTS:
           
           // Check if we should chain from a previous task
           let chainOptions = {};
-          if (this.enableChaining && this.options.outputFormat === 'stream-json' && task.depends?.length > 0) {
+          const forceDependencyChaining = process.env.CLAUDE_FLOW_FORCE_DEPENDENCY_CHAINING === 'true';
+          if ((forceDependencyChaining || (this.enableChaining && !process.env.CLAUDE_FLOW_NO_DEPENDENCY_CHAINING)) && 
+              this.options.outputFormat === 'stream-json' && task.depends?.length > 0) {
             // Get the output stream from the last dependency
             const lastDependency = task.depends[task.depends.length - 1];
             const dependencyStream = this.taskOutputStreams.get(lastDependency);

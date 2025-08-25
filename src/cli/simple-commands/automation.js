@@ -289,7 +289,7 @@ async function runWorkflowCommand(subArgs, flags) {
       logLevel: options.verbose ? 'debug' : 'info',
       workflowName: workflowData.name,
       workflowType: workflowData.type || (workflowData.name?.toLowerCase().includes('ml') ? 'ml' : 'general'),
-      enableChaining: options.chaining !== false // Default to true for stream-json chaining
+      enableChaining: !options['no-chaining'] && options.chaining !== false // Respect --no-chaining flag
     });
     
     // Apply variable overrides if provided
@@ -382,7 +382,7 @@ async function mleStarCommand(subArgs, flags) {
       logLevel: options.quiet ? 'quiet' : (options.verbose ? 'debug' : 'info'),
       workflowName: 'MLE-STAR Machine Learning Engineering Workflow',
       workflowType: 'ml',
-      enableChaining: options.chaining !== false // Default to true for stream-json chaining
+      enableChaining: !options['no-chaining'] && options.chaining !== false // Respect --no-chaining flag
     });
     
     // Prepare MLE-STAR specific variables
