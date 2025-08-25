@@ -274,6 +274,14 @@ async function runWorkflowCommand(subArgs, flags) {
   }
 
   try {
+    // Global console.log redirect for JSON output mode
+    // This ensures ALL progress messages go to stderr, preserving stdout for JSON stream
+    let originalConsoleLog;
+    if (options['output-format'] === 'stream-json') {
+      originalConsoleLog = console.log;
+      console.log = console.error; // Redirect all console.log to stderr
+    }
+    
     console.log(`🔄 Loading workflow: ${workflowFile}`);
     
     // Load workflow definition
@@ -324,6 +332,11 @@ async function runWorkflowCommand(subArgs, flags) {
     }
     
   } catch (error) {
+    // Restore original console.log if we redirected it
+    if (originalConsoleLog) {
+      console.log = originalConsoleLog;
+    }
+    
     printError(`Failed to execute workflow: ${error.message}`);
     if (options['non-interactive'] || options.nonInteractive) {
       process.exit(1);

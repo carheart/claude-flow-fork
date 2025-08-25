@@ -49,6 +49,18 @@ export class WorkflowExecutor {
     this.taskOutputStreams = new Map(); // Store output streams for chaining
     this.enableChaining = options.enableChaining !== false; // Default to true
     
+    // Global console.log override for JSON output mode
+    // Redirect ALL console.log to stderr when outputting JSON to preserve stdout for JSON stream
+    if (this.options.outputFormat === 'stream-json') {
+      this.originalConsoleLog = console.log;
+      console.log = console.error; // Redirect all console.log to stderr
+      
+      // Store reference to restore later
+      this._cleanupConsole = () => {
+        console.log = this.originalConsoleLog;
+      };
+    }
+    
     // Hooks integration
     this.hooksEnabled = true;
     this.sessionId = generateId('automation-session');
@@ -135,11 +147,21 @@ export class WorkflowExecutor {
         await this.cleanupClaudeInstances();
       }
       
+      // Restore original console.log if we redirected it
+      if (this._cleanupConsole) {
+        this._cleanupConsole();
+      }
+      
       return result;
       
     } catch (error) {
       printError(`Workflow execution failed: ${error.message}`);
       await this.cleanupClaudeInstances();
+      
+      // Restore original console.log if we redirected it
+      if (this._cleanupConsole) {
+        this._cleanupConsole();
+      }
       throw error;
     }
   }
