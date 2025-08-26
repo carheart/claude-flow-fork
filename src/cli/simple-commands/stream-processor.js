@@ -64,6 +64,13 @@ export class StreamJsonProcessor extends Transform {
   processEvent(event) {
     this.eventCount++;
     
+    // PASSTHROUGH MODE: Output raw Claude JSON for SwarmUI when enabled
+    if (process.env.CLAUDE_FLOW_PASSTHROUGH === 'true') {
+      // Output the raw event to stdout for SwarmUI to parse
+      // This preserves tool_use/tool_result events with swarm data
+      console.log(JSON.stringify(event));
+    }
+    
     // If we have a concurrent display, update it instead of console logging
     if (this.display) {
       this.updateDisplay(event);

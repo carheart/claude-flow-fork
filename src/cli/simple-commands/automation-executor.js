@@ -399,7 +399,11 @@ export class WorkflowExecutor {
         output.error = event.error;
       }
       
-      console.log(JSON.stringify(output));
+      // Skip workflow-level JSON output when passthrough mode is enabled
+      // to avoid mixing with Claude conversation JSON
+      if (process.env.CLAUDE_FLOW_PASSTHROUGH !== 'true') {
+        console.log(JSON.stringify(output));
+      }
     } else {
       // Format output for text mode
       switch (event.type) {

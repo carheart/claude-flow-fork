@@ -276,8 +276,10 @@ async function runWorkflowCommand(subArgs, flags) {
   try {
     // Global console.log redirect for JSON output mode
     // This ensures ALL progress messages go to stderr, preserving stdout for JSON stream
+    // BUT: Skip redirect when CLAUDE_FLOW_PASSTHROUGH is enabled
+    // because we need console.log for outputting Claude JSON events
     let originalConsoleLog;
-    if (options['output-format'] === 'stream-json') {
+    if (options['output-format'] === 'stream-json' && process.env.CLAUDE_FLOW_PASSTHROUGH !== 'true') {
       originalConsoleLog = console.log;
       console.log = console.error; // Redirect all console.log to stderr
     }
